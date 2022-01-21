@@ -15,15 +15,8 @@ DBNAME = os.getenv('POSTGRES_DB')
 
 app = Flask(__name__)
 # app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///students.sqlite3'
-app.config['SQLALCHEMY_DATABASE_URI'] = \
-    'postgresql+psycopg2://{user}:{passwd}@{host}:{port}/{db}'.format(
-        user=DBUSER,
-        passwd=DBPASS,
-        host=DBHOST,
-        port=DBPORT,
-        db=DBNAME)
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.secret_key = 'foobarbaz'
+app.config['SQLALCHEMY_DATABASE_URI'] = "postgresql://marco:foobarbaz@database-1.c9dmjrv0kdhi.us-east-2.rds.amazonaws.com:5432/testdb"
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
 
 app.config['MAIL_SERVER']='smtp.gmail.com'
 app.config['MAIL_PORT'] = 465
