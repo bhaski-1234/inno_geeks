@@ -3,12 +3,28 @@ from flask_sqlalchemy import SQLAlchemy
 
 from flask_login import LoginManager
 from flask_cors import CORS, cross_origin
+import os
+
+
+DBUSER = os.getenv('POSTGRES_USER')
+DBPASS = os.getenv('POSTGRES_PASSWORD')
+DBHOST = os.getenv('POSTGRES_HOST')
+DBPORT = os.getenv('POSTGRES_PORT')
+DBNAME = os.getenv('POSTGRES_DB')
+
+
 app = Flask(__name__)
-cors = CORS(app)
-app.config['CORS_HEADERS'] = 'Content-Type'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///data.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS']=False
-app.config['SECRET_KEY']='d8c054f87c3a6142b8aea948'
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///students.sqlite3'
+app.config['SQLALCHEMY_DATABASE_URI'] = \
+    'postgresql+psycopg2://{user}:{passwd}@{host}:{port}/{db}'.format(
+        user=DBUSER,
+        passwd=DBPASS,
+        host=DBHOST,
+        port=DBPORT,
+        db=DBNAME)
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.secret_key = 'foobarbaz'
+
 app.config['MAIL_SERVER']='smtp.gmail.com'
 app.config['MAIL_PORT'] = 465
 app.config['MAIL_USERNAME'] = 'siddhukanu3@gmail.com'
