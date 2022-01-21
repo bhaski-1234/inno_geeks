@@ -7,9 +7,9 @@ from market.CreateMeet.create_event import createEvent
 from market.models import Patients, Doctor, Prescription, past_history_of_illness, immunisation
 from market import db
 from flask_login import login_user, logout_user, login_required, current_user
-# from market.processor import chatbot_response
+from market.processor import chatbot_response
 from functools import wraps
-# from processor import chatbot_response    
+# from processor import chatbot_response
 # imports for PyJWT authentication
 from flask_jwt_extended import create_access_token
 from flask_jwt_extended import get_jwt_identity
@@ -23,13 +23,15 @@ app.config["JWT_SECRET_KEY"] = "gydbybuduubchydbbu46t363vydw3u6y88hbb2"
 jwt = JWTManager(app)
 
 mail = Mail(app)  # instantiate the mail class
+tokenDict={}
+doctorDict={}
 
-
+#Call for ChatBot Form
 # @app.route('/index', methods=["GET", "POST"])
 # def index():
 #     return render_template('index.html', **locals())
 
-
+# Chatbot
 # @app.route('/chatbot', methods=["GET", "POST"])
 # def chatbotResponse():
 
@@ -40,16 +42,58 @@ mail = Mail(app)  # instantiate the mail class
 
 #     return jsonify({"response": response})
 
-@app.route('/')
-def home():
-    return "Hello"
+# User Login
+@app.route("/api/login", methods=['POST'])
+def login():
+    username = request.json['username']
+    password = request.json['password']
+    if username == "":
+        result = {
+            "status": "unsuccessful",
+            "message": "Enter username"
+        }
+        return jsonify(result), 401
 
-@app.route('/api/logout')
-def logout_page():
-    logout_user()
-    flash("You have been logged out!", category='info')
-    return redirect(url_for("home_page"))
-@app.route('/api/doctor2', methods=['POST'])
+    if password == "":
+        result = {
+            "status": "unsuccessful",
+            "message": "Enter Password"
+        }
+        return jsonify(result), 401
+
+    attempted_user = Patients.query.filter_by(username=username).first()
+    if attempted_user and attempted_user.password_hash == password:
+        access_token = create_access_token(identity=username)
+        session['token'] = access_token
+        tokenDict[attempted_user.id]=access_token
+        result = {
+            "status": "successful",
+            "username": username,
+            "message": "Login Successful",
+            "access_token":access_token,
+            "id":attempted_user.id
+        }
+        print(tokenDict)
+        return jsonify(result), 200
+    else:
+        result = {
+            "status": "unsuccessful",
+            "message": "Invalid Credentials"
+        }
+        return jsonify(result), 401
+
+# User Logout
+@app.route('/api/logout/<int:user_id>',methods=["GET"])
+def logout_page(user_id):
+    del tokenDict[user_id]
+    print(tokenDict)
+    result={
+        "status":"Logged out"
+    }
+    return jsonify(result),200
+
+# Doctor Login
+@app.route('/api/doctor', methods=['POST'])
 def doctor():
     email_address=request.json['email_address']
     attempted_doctor = Doctor.query.filter_by(email_address=email_address).first()
@@ -73,61 +117,35 @@ def doctor():
     else:
         password=request.json['password']
         if attempted_doctor.password_hash==password:
-            login_user(attempted_doctor)
-            session['doctor logged in']=True
+            access_token = create_access_token(identity=email_address)
+            session['doctorToken']=access_token
+            doctorDict[attempted_doctor.id]=access_token
             result={
                 "email_address":email_address,
                 "status":"successful",
+                "token":access_token
             }
+            session['doctor_id']= attempted_doctor.id
             return jsonify(result),200
         else:
             result={
-                "status":"Invalid Password",
+                "status":"unsuccessful",
+                "message":"Invalid Password"
             }
             return jsonify(result),401
-         
 
-@app.route("/api/login2", methods=['POST'])
-def login():
-    username = request.json['username']
-    password = request.json['password']
-    if username is "":
-        result = {
-            "status": "unsuccessful",
-            "message": "Enter username"
-        }
-        return jsonify(result), 401
+# Doctor Logout
+@app.route('/api/logoutDoctor/<int:user_id>',methods=["GET"])
+def Doctorlogout_page(user_id):
+    del doctorDict[user_id]
+    print(doctorDict)
+    result={
+        "status":"Logged out"
+    }
+    return jsonify(result),200
 
-    if password is "":
-        result = {
-            "status": "unsuccessful",
-            "message": "Enter Password"
-        }
-        return jsonify(result), 401
-
-    attempted_user = Patients.query.filter_by(username=username).first()
-    if attempted_user and attempted_user.password_hash == password:
-        login_user(attempted_user)
-        session['logged_in'] = True
-        access_token = create_access_token(identity=username)
-        result = {
-            "status": "successful",
-            "username": username,
-            "message": "Login Successful",
-            "access_token":access_token,
-            "id":attempted_user.id
-        }
-        return jsonify(result), 200
-    else:
-        result = {
-            "status": "unsuccessful",
-            "message": "Invalid Credentials"
-        }
-        return jsonify(result), 401
-
-
-
-@app.route('/api/register2', methods=['POST'])
+# User Register
+@app.route('/api/register', methods=['POST'])
 def register():
     username = request.json['username']
     attempted_user = Patients.query.filter_by(username=username).first()
@@ -168,17 +186,37 @@ def register():
         }
         return jsonify(result), 201
 
+# Doctor Select User 
+@app.route('/api/doctor/users', methods=['GET', 'POST'])
+def testin():
+    frontToken = str(request.headers.get('x-access-token'))
+    if session['doctorToken']==frontToken:
+        patients = Patients.query
+        patientsJson = json.dumps([r.as_dict() for r in patients])
+        return patientsJson, 200
+    result={
+        "status":"unsuccessful",
+        "message":"Token Not Passed"
+    }
+    return jsonify(result), 401
 
-@app.route("/api/prescribe2/<int:user_id>", methods=["POST"])
-@login_required
-def add_prescription(user_id):
+# User GET Prescription
+@app.route("/api/prescribe/<int:pid>", methods=["GET"])
+def get_prescription(pid):
+    frontToken = str(request.headers.get('x-access-token'))
+    if request.method == "GET" and session['Token']!=frontToken:
+        return Response("Invalid Token", status=401, mimetype='application/json')
+    prescriptions = Prescription.query.filter_by(userID=pid)
+    s = json.dumps([r.as_dict() for r in prescriptions])
+    return s, 200
 
-    if session['logged_in'] == False:
-        result = {
-            "status": "Invalid Password",
-        }
-        return Response("Unauthorized", status=401, mimetype='application/json')
-    else:
+
+
+# Doctor POST Prescription
+@app.route("/api/doctor/prescribe/<int:user_id>", methods=["POST"])
+def add_prescription(user_id,token,doctor_id):
+    frontToken = str(request.headers.get('x-access-token'))
+    if request.method == 'POST' and session['doctorToken']==frontToken:
         prescriptionID = request.json['pi']
         medItem = request.json['Medication item']
         prepSubstanceName = request.json['Name']
@@ -261,34 +299,11 @@ def add_prescription(user_id):
         }
         return jsonify(result), 200
 
-
-@app.route('/admin/<int:page_id>', methods=['GET'])
-def edit_details(page_id):
-    if session['doctor logged in'] == False:
-        return 401
-    if request.method == "GET":
-        patient_immunisation_table = immunisation.query.filter_by(
-            user_id=page_id)
-        past_history = past_history_of_illness.query.filter_by(user_id=page_id)
-        past = json.dumps([r.as_dict() for r in past_history])
-        immune = json.dumps([rs.as_dict()
-                             for rs in patient_immunisation_table])
-        return (past+immune), 200
-
-
-@app.route("/api/prescribe3/<int:pid>", methods=["GET"])
-def get_prescription(pid):
-    if session['logged in'] == False:
-        return Response("User not logged in", status=401, mimetype='application/json')
-    prescriptions = Prescription.query.filter_by(userID=pid)
-    s = json.dumps([r.as_dict() for r in prescriptions])
-    return s, 200
-
-
-@app.route('/api/admin/past/<int:page_id>', methods=['GET', 'POST'])
-@login_required
-def edit_patient_page(page_id):
-    if request.method == 'POST':
+# Doctor POST Past History Of Illness
+@app.route('/api/doctor/past/<int:page_id>', methods=['POST'])
+def edit_patient_page(page_id,token,doctor_id):
+    frontToken = str(request.headers.get('x-access-token'))
+    if request.method == 'POST' and session['doctorToken']==frontToken:
         past_history = past_history_of_illness.query.filter_by(user_id=page_id)
         immune = immunisation.query.filter_by(user_id=page_id)
         patient = db.session.query(Patients).filter()
@@ -350,23 +365,27 @@ def edit_patient_page(page_id):
             # login_user(user_to_create)
             result = {
                 "status": "successful",
-                "page_id": page_id
+                "page_id": page_id,
+                "token": session['doctorToken']
             }
+            print(session['doctorToken'])
             return jsonify(result), 200
+        
+# User GET Past History Of Illness
+@app.route("/api/past/<int:page_id>", methods=["GET"])
+def get_past(page_id):
+    frontToken = str(request.headers.get('x-access-token'))
+    if request.method == "GET" and session['Token']!=frontToken:
+        return Response("Invalid Token", status=401, mimetype='application/json')
+    past_history = past_history_of_illness.query.filter_by(user_id=page_id)
+    s = json.dumps([r.as_dict() for r in past_history])
+    return s, 200
 
-    elif request.method == "GET":
-        past_history = past_history_of_illness.query.filter_by(user_id=page_id)
-        s = json.dumps([r.as_dict() for r in past_history])
-        # , default=alchemyencoder
-        return s, 200
-
-
-
-# immunisation route
-@app.route('/api/admin/immunisation/<int:page_id>', methods=['GET', 'POST'])
-@login_required
+# Doctor POST Immunisation
+@app.route('/api/doctor/immunisation/<int:page_id>', methods=['POST'])
 def edit_immunisation_page(page_id):
-    if request.method == 'POST':
+    frontToken = str(request.headers.get('x-access-token'))
+    if request.method == 'POST' and session['doctorToken']==frontToken:
         immune = immunisation.query.filter_by(user_id=page_id)
         patient = db.session.query(Patients).filter()
         immunisationjson = immunisation(immunisation_item=request.json['immunisation_item'],
@@ -420,7 +439,6 @@ def edit_immunisation_page(page_id):
         else:
             db.session.add(immunisationjson)
             db.session.commit()
-            # login_user(user_to_create)
             result = {
                 "status": "successful",
                 "page_id": page_id,
@@ -429,19 +447,17 @@ def edit_immunisation_page(page_id):
             }
             return jsonify(result), 200
 
-    elif request.method == "GET":
-        pimmune = immunisation.query.filter_by(user_id=page_id)
-        s = json.dumps([r.as_dict() for r in pimmune])
-        return s
+# User GET Immunisation
+@app.route("/api/immunisation/<int:page_id>", methods=["GET"])
+def get_immunisation(page_id):
+    frontToken = str(request.headers.get('x-access-token'))
+    if request.method == "GET" and session['Token']!=frontToken:
+        return Response("Invalid Token", status=401, mimetype='application/json')
+    pimmune = immunisation.query.filter_by(user_id=page_id)
+    s = json.dumps([r.as_dict() for r in pimmune])
+    return s, 200
 
-
-@app.route('/api/admin/users', methods=['GET', 'POST'])
-def testin():
-    patients = Patients.query
-    patientsJson = json.dumps([r.as_dict() for r in patients])
-    return patientsJson, 200
-
-
+# Schedule Meet
 @app.route("/api/schedule", methods=['GET', 'POST'])
 def indexone():
     email = request.json["email"]
@@ -459,4 +475,3 @@ def indexone():
         "eventLink": eventlink
     }
     return jsonify(result), 200
-
