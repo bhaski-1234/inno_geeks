@@ -25,7 +25,9 @@ jwt = JWTManager(app)
 mail = Mail(app)  # instantiate the mail class
 tokenDict={}
 doctorDict={}
-
+@app.route('/')
+def home():
+    return "Hello"
 #Call for ChatBot Form
 # @app.route('/index', methods=["GET", "POST"])
 # def index():
