@@ -14,6 +14,7 @@ DBNAME = os.getenv('POSTGRES_DB')
 
 
 app = Flask(__name__)
+app.secret_key = "foobarbaz"
 # app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///students.sqlite3'
 app.config['SQLALCHEMY_DATABASE_URI'] = "postgresql://marco:foobarbaz@database-1.c9dmjrv0kdhi.us-east-2.rds.amazonaws.com:5432/testdb"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
