@@ -484,8 +484,8 @@ def indexone():
         sender=('Sid From InCare', 'siddhukanu3@gmail.com'),
         recipients=[email]
     )
-    msg.html = render_template('email.html', eventlink=eventlink)
-    mail.send(msg)
+    #msg.html = render_template('email.html', eventlink=eventlink)
+    #mail.send(msg)
     flash(f"Meeting link has been sent")
     result = {
         "status": "sent",
