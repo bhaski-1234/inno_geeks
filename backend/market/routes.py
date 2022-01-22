@@ -16,6 +16,7 @@ from flask_jwt_extended import get_jwt_identity
 from flask_jwt_extended import jwt_required
 from flask_jwt_extended import JWTManager
 from flask import Response
+from flask_cors import cross_origin
 
 
 # Setup the Flask-JWT-Extended extension
@@ -26,6 +27,7 @@ mail = Mail(app)  # instantiate the mail class
 tokenDict={}
 doctorDict={}
 @app.route('/')
+@cross_origin()
 def home():
     return "Hello"
 #Call for ChatBot Form
@@ -46,6 +48,7 @@ def home():
 
 # User Login
 @app.route("/api/login", methods=['POST'])
+@cross_origin()
 def login():
     username = request.json['username']
     password = request.json['password']
@@ -86,6 +89,7 @@ def login():
 
 # User Logout
 @app.route('/api/logout/<int:user_id>',methods=["GET"])
+@cross_origin()
 def logout_page(user_id):
     del tokenDict[user_id]
     print(tokenDict)
@@ -96,6 +100,7 @@ def logout_page(user_id):
 
 # Doctor Login
 @app.route('/api/doctor', methods=['POST'])
+@cross_origin()
 def doctor():
     email_address=request.json['email_address']
     attempted_doctor = Doctor.query.filter_by(email_address=email_address).first()
@@ -138,6 +143,7 @@ def doctor():
 
 # Doctor Logout
 @app.route('/api/logoutDoctor/<int:user_id>',methods=["GET"])
+@cross_origin()
 def Doctorlogout_page(user_id):
     del doctorDict[user_id]
     print(doctorDict)
@@ -148,6 +154,7 @@ def Doctorlogout_page(user_id):
 
 # User Register
 @app.route('/api/register', methods=['POST'])
+@cross_origin()
 def register():
     username = request.json['username']
     attempted_user = Patients.query.filter_by(username=username).first()
@@ -190,6 +197,7 @@ def register():
 
 # Doctor Select User 
 @app.route('/api/doctor/users', methods=['GET', 'POST'])
+@cross_origin()
 def testin():
     frontToken = str(request.headers.get('x-access-token'))
     if session['doctorToken']==frontToken:
@@ -204,6 +212,7 @@ def testin():
 
 # User GET Prescription
 @app.route("/api/prescribe/<int:pid>", methods=["GET"])
+@cross_origin()
 def get_prescription(pid):
     frontToken = str(request.headers.get('x-access-token'))
     if request.method == "GET" and session['Token']!=frontToken:
@@ -216,6 +225,7 @@ def get_prescription(pid):
 
 # Doctor POST Prescription
 @app.route("/api/doctor/prescribe/<int:user_id>", methods=["POST"])
+@cross_origin()
 def add_prescription(user_id,token,doctor_id):
     frontToken = str(request.headers.get('x-access-token'))
     if request.method == 'POST' and session['doctorToken']==frontToken:
@@ -303,6 +313,7 @@ def add_prescription(user_id,token,doctor_id):
 
 # Doctor POST Past History Of Illness
 @app.route('/api/doctor/past/<int:page_id>', methods=['POST'])
+@cross_origin()
 def edit_patient_page(page_id,token,doctor_id):
     frontToken = str(request.headers.get('x-access-token'))
     if request.method == 'POST' and session['doctorToken']==frontToken:
@@ -375,6 +386,7 @@ def edit_patient_page(page_id,token,doctor_id):
         
 # User GET Past History Of Illness
 @app.route("/api/past/<int:page_id>", methods=["GET"])
+@cross_origin()
 def get_past(page_id):
     frontToken = str(request.headers.get('x-access-token'))
     if request.method == "GET" and session['Token']!=frontToken:
@@ -385,6 +397,7 @@ def get_past(page_id):
 
 # Doctor POST Immunisation
 @app.route('/api/doctor/immunisation/<int:page_id>', methods=['POST'])
+@cross_origin()
 def edit_immunisation_page(page_id):
     frontToken = str(request.headers.get('x-access-token'))
     if request.method == 'POST' and session['doctorToken']==frontToken:
@@ -451,6 +464,7 @@ def edit_immunisation_page(page_id):
 
 # User GET Immunisation
 @app.route("/api/immunisation/<int:page_id>", methods=["GET"])
+@cross_origin()
 def get_immunisation(page_id):
     frontToken = str(request.headers.get('x-access-token'))
     if request.method == "GET" and session['Token']!=frontToken:
@@ -461,6 +475,7 @@ def get_immunisation(page_id):
 
 # Schedule Meet
 @app.route("/api/schedule", methods=['GET', 'POST'])
+@cross_origin()
 def indexone():
     email = request.json["email"]
     eventlink = createEvent(email)
