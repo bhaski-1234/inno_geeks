@@ -18,7 +18,7 @@ services:
     depends_on:
       - db
     ports:
-      - '80:5000'
+      - '443:5000'
 
   db:
     image: postgres:10
