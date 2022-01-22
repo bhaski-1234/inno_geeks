@@ -1,14 +1,15 @@
+from flask_cors import cross_origin
 from flask_mail import Mail, Message
 import re
 from flask import flash, json, session
+from flask_session import Session
 from market import app
-from flask import render_template, redirect, url_for, request, jsonify
+from flask import render_template, request, jsonify
 from market.CreateMeet.create_event import createEvent
 from market.models import Patients, Doctor, Prescription, past_history_of_illness, immunisation
 from market import db
-from flask_login import login_user, logout_user, login_required, current_user
-# from market.processor import chatbot_response
-from functools import wraps
+from flask_login import login_user
+#from market.processor import chatbot_response
 # from processor import chatbot_response
 # imports for PyJWT authentication
 from flask_jwt_extended import create_access_token
@@ -26,17 +27,21 @@ jwt = JWTManager(app)
 mail = Mail(app)  # instantiate the mail class
 tokenDict={}
 doctorDict={}
+currentDict={}
+
 @app.route('/')
 @cross_origin()
-def home():
-    return "Hello"
+def hello():
+    return 'Hello'
 #Call for ChatBot Form
 # @app.route('/index', methods=["GET", "POST"])
+# @cross_origin()
 # def index():
 #     return render_template('index.html', **locals())
 
 # Chatbot
 # @app.route('/chatbot', methods=["GET", "POST"])
+# @cross_origin()
 # def chatbotResponse():
 
 #     if request.method == 'POST':
@@ -45,6 +50,7 @@ def home():
 #         response = chatbot_response(the_question)
 
 #     return jsonify({"response": response})
+
 
 # User Login
 @app.route("/api/login", methods=['POST'])
@@ -105,7 +111,6 @@ def doctor():
     email_address=request.json['email_address']
     attempted_doctor = Doctor.query.filter_by(email_address=email_address).first()
     regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
-
     if(not re.fullmatch(regex, request.json['email_address'])):
         result={
         "status":"unsuccessful",
@@ -130,9 +135,10 @@ def doctor():
             result={
                 "email_address":email_address,
                 "status":"successful",
+                "id":attempted_doctor.id,
                 "token":access_token
             }
-            session['doctor_id']= attempted_doctor.id
+            currentDict['current']=attempted_doctor.id
             return jsonify(result),200
         else:
             result={
@@ -146,6 +152,7 @@ def doctor():
 @cross_origin()
 def Doctorlogout_page(user_id):
     del doctorDict[user_id]
+    del currentDict["current"]
     print(doctorDict)
     result={
         "status":"Logged out"
@@ -200,7 +207,7 @@ def register():
 @cross_origin()
 def testin():
     frontToken = str(request.headers.get('x-access-token'))
-    if session['doctorToken']==frontToken:
+    if doctorDict[currentDict['current']]==frontToken:
         patients = Patients.query
         patientsJson = json.dumps([r.as_dict() for r in patients])
         return patientsJson, 200
@@ -215,8 +222,13 @@ def testin():
 @cross_origin()
 def get_prescription(pid):
     frontToken = str(request.headers.get('x-access-token'))
-    if request.method == "GET" and session['Token']!=frontToken:
-        return Response("Invalid Token", status=401, mimetype='application/json')
+    if request.method == "GET" and tokenDict[pid]!=frontToken:
+        result={
+        "status":"unsuccessful",
+        "message":"Invalid Token"
+        }
+        return jsonify(result), 401
+        
     prescriptions = Prescription.query.filter_by(userID=pid)
     s = json.dumps([r.as_dict() for r in prescriptions])
     return s, 200
@@ -226,9 +238,9 @@ def get_prescription(pid):
 # Doctor POST Prescription
 @app.route("/api/doctor/prescribe/<int:user_id>", methods=["POST"])
 @cross_origin()
-def add_prescription(user_id,token,doctor_id):
+def add_prescription(user_id):
     frontToken = str(request.headers.get('x-access-token'))
-    if request.method == 'POST' and session['doctorToken']==frontToken:
+    if request.method == 'POST' and doctorDict[currentDict['current']]==frontToken:
         prescriptionID = request.json['pi']
         medItem = request.json['Medication item']
         prepSubstanceName = request.json['Name']
@@ -310,13 +322,15 @@ def add_prescription(user_id,token,doctor_id):
             "status": "Prescription added",
         }
         return jsonify(result), 200
+    return jsonify({'status':'unsuccessful',
+                    'message':"Invalid Token"}),401
 
 # Doctor POST Past History Of Illness
 @app.route('/api/doctor/past/<int:page_id>', methods=['POST'])
 @cross_origin()
-def edit_patient_page(page_id,token,doctor_id):
+def edit_patient_page(page_id):
     frontToken = str(request.headers.get('x-access-token'))
-    if request.method == 'POST' and session['doctorToken']==frontToken:
+    if request.method == 'POST' and doctorDict[currentDict['current']]==frontToken:
         past_history = past_history_of_illness.query.filter_by(user_id=page_id)
         immune = immunisation.query.filter_by(user_id=page_id)
         patient = db.session.query(Patients).filter()
@@ -379,17 +393,18 @@ def edit_patient_page(page_id,token,doctor_id):
             result = {
                 "status": "successful",
                 "page_id": page_id,
-                "token": session['doctorToken']
+                "token": session.get('doctorToken')
             }
-            print(session['doctorToken'])
+            print(session.get('doctorToken'))
             return jsonify(result), 200
+    return jsonify({"status":"unsuccessful", "message":"Invalid Token"})
         
 # User GET Past History Of Illness
 @app.route("/api/past/<int:page_id>", methods=["GET"])
 @cross_origin()
 def get_past(page_id):
     frontToken = str(request.headers.get('x-access-token'))
-    if request.method == "GET" and session['Token']!=frontToken:
+    if request.method == "GET" and tokenDict[page_id]!=frontToken:
         return Response("Invalid Token", status=401, mimetype='application/json')
     past_history = past_history_of_illness.query.filter_by(user_id=page_id)
     s = json.dumps([r.as_dict() for r in past_history])
@@ -400,7 +415,7 @@ def get_past(page_id):
 @cross_origin()
 def edit_immunisation_page(page_id):
     frontToken = str(request.headers.get('x-access-token'))
-    if request.method == 'POST' and session['doctorToken']==frontToken:
+    if request.method == 'POST' and doctorDict[currentDict['current']]==frontToken:
         immune = immunisation.query.filter_by(user_id=page_id)
         patient = db.session.query(Patients).filter()
         immunisationjson = immunisation(immunisation_item=request.json['immunisation_item'],
@@ -467,7 +482,8 @@ def edit_immunisation_page(page_id):
 @cross_origin()
 def get_immunisation(page_id):
     frontToken = str(request.headers.get('x-access-token'))
-    if request.method == "GET" and session['Token']!=frontToken:
+    print("frontToken---------------------------    ",frontToken)
+    if request.method == "GET" and tokenDict[page_id]!=frontToken:
         return Response("Invalid Token", status=401, mimetype='application/json')
     pimmune = immunisation.query.filter_by(user_id=page_id)
     s = json.dumps([r.as_dict() for r in pimmune])
@@ -484,8 +500,8 @@ def indexone():
         sender=('Sid From InCare', 'siddhukanu3@gmail.com'),
         recipients=[email]
     )
-    #msg.html = render_template('email.html', eventlink=eventlink)
-    #mail.send(msg)
+    msg.html = render_template('email.html', eventlink=eventlink)
+    mail.send(msg)
     flash(f"Meeting link has been sent")
     result = {
         "status": "sent",
