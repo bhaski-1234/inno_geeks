@@ -49,6 +49,9 @@ currentDict={}
 
 #     return jsonify({"response": response})
 
+@app.route("/" , methods=['GET'])
+def home():
+    return "Hello"
 
 # User Login
 @app.route("/api/login", methods=['POST'])
