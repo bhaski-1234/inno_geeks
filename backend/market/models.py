@@ -1,5 +1,6 @@
 from sqlalchemy.orm import backref
 from market import db,login_manager
+from werkzeug.security import generate_password_hash, check_password_hash
 
 from flask_login import UserMixin
 
@@ -22,7 +23,7 @@ class Patients(db.Model, UserMixin,Model):
     def __init__(self,fullname,email_address,password,username):
         self.fullname=fullname
         self.email_address=email_address
-        self.password_hash=password
+        self.password_hash=generate_password_hash(password)
         self.username=username
 
     @property
@@ -34,7 +35,7 @@ class Patients(db.Model, UserMixin,Model):
         self.password_hash = plain_text_password
 
     def check_password_correction(self, attempted_password):
-        return (self.password_hash, attempted_password)
+        return check_password_hash(self.password_hash, attempted_password)
 
 class Doctor(db.Model, UserMixin):
     __tablename__ = 'admin'
@@ -62,41 +63,42 @@ class Prescription(db.Model,Model):
     medItem=db.Column(db.String())
     prepSubstanceName=db.Column(db.String())
     prepForm=db.Column(db.String())
-    prepStrength=db.Column(db.Float())
+    prepStrength=db.Column(db.String())
     prepStrengthUnit=db.Column(db.String())
-    diluentAmount=db.Column(db.Float())
+    diluentAmount=db.Column(db.String())
     diluentUnit=db.Column(db.String())
     ingredientSubstanceName=db.Column(db.String())
     ingredientForm=db.Column(db.String())
     ingredientCategory=db.Column(db.String())
-    ingredientStrength=db.Column(db.Float())
+    ingredientStrength=db.Column(db.String())
     ingredientStrengthUnit=db.Column(db.String())
     ingredientDescription=db.Column(db.String())
-    ingredientAmount=db.Column(db.Float())
+    ingredientAmount=db.Column(db.String())
     ingredientAmountUnit=db.Column(db.String())
     ingredientRole=db.Column(db.String())
     ingredientRole2=db.Column(db.String())
     medDescription=db.Column(db.String())
     medRoute=db.Column(db.String())
     medDosageInstructions=db.Column(db.String())
-    doseAmount=db.Column(db.Float())
-    doseAmountLower=db.Column(db.Float())
-    doseAmountUpper=db.Column(db.Float())
+    doseAmount=db.Column(db.String())
+    doseAmountLower=db.Column(db.String())
+    doseAmountUpper=db.Column(db.String())
     doseUnit=db.Column(db.String())
-    doseTimingFreq=db.Column(db.Float())
+    doseTimingFreq=db.Column(db.String())
     doseTimingFreqUnit=db.Column(db.String())
-    doseTimingFreqLower=db.Column(db.Float())
+    doseTimingFreqLower=db.Column(db.String())
     doseTimingFreqLowerUnit=db.Column(db.String())
-    doseTimingFreqUpper=db.Column(db.Float())
+    doseTimingFreqUpper=db.Column(db.String())
     doseTimingFreqUpperUnit=db.Column(db.String())
     doseTimingInterval=db.Column(db.String())
     doseSpecificTime=db.Column(db.String())
     doseNamedTimeEvent=db.Column(db.String())
     doseNamedTimeEvent2=db.Column(db.String())
-    doseExactTimingCritical=db.Column(db.Boolean())
-    doseAsRequired=db.Column(db.Boolean())
+
+    doseExactTimingCritical=db.Column(db.String())
+    doseAsRequired=db.Column(db.String())
     doseAsRequiredCriterion=db.Column(db.String())
-    infusionAdminRateQ=db.Column(db.Float())
+    infusionAdminRateQ=db.Column(db.String())
     infusionAdminRateUnit=db.Column(db.String())
     infusionAdminRateT=db.Column(db.String())
     doseAdminDuration=db.Column(db.String())
@@ -105,11 +107,11 @@ class Prescription(db.Model,Model):
     directionRepetitionInterval=db.Column(db.String())
     directionSpecificDate=db.Column(db.String())
     directionSpecificTime=db.Column(db.String())
-    directionSpecificDoW=db.Column(db.Integer())
-    directionSpecificDoM=db.Column(db.Integer())
+    directionSpecificDoW=db.Column(db.String())
+    directionSpecificDoM=db.Column(db.String())
     directionEventName=db.Column(db.String())
     directionEventStartInterval=db.Column(db.String())
-    safetyMaxAmount=db.Column(db.Float())
+    safetyMaxAmount=db.Column(db.String())
     safetyMaxAmountUnit=db.Column(db.String())
     safetyAllowedPeriod=db.Column(db.String())
     overrideReason=db.Column(db.String())
@@ -120,12 +122,14 @@ class Prescription(db.Model,Model):
     courseDiscontinuedTime=db.Column(db.String())
     courseWrittenDate=db.Column(db.String())
     courseWrittenTime=db.Column(db.String())
-    authNumberofRepeatsAllowed=db.Column(db.Integer())
+
+    authNumberofRepeatsAllowed=db.Column(db.String())
     authValidityPeriodDate=db.Column(db.String())
     authValidityPeriodTime=db.Column(db.String())
     dispenseInstruction=db.Column(db.String())
     dispenseAmountDescription=db.Column(db.String())
-    dispenseAmount=db.Column(db.Float())
+
+    dispenseAmount=db.Column(db.String())
     dispenseAmountUnits=db.Column(db.String())
     dispenseDurationofSupply=db.Column(db.String())
     orderComment=db.Column(db.String())
