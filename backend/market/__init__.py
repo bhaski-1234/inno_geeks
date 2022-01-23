@@ -5,6 +5,7 @@ from flask_login import LoginManager
 from flask_cors import CORS, cross_origin
 import os
 
+#postgreserror
 
 DBUSER = os.getenv('POSTGRES_USER')
 DBPASS = os.getenv('POSTGRES_PASSWORD')
